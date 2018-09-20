@@ -1,0 +1,452 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
+   "http://www.w3.org/TR/html4/strict.dtd">
+
+<html lang="en">
+
+<head>
+  <link rel="stylesheet"
+        type="text/css"
+        href="reset.css" />
+  <link rel="stylesheet"
+        type="text/css"
+        href="./jquery.ganttView.css" />
+  <link href="./lib/jquery-ui.css"
+        rel="stylesheet">
+  <script src="./lib/jquery.js"></script>
+  <script src="./lib/jquery-ui.js"></script>
+  <script src="./lib/vue.js"></script>
+  <script src="./lib/moment.js"></script>
+  <script type="text/javascript"
+          src="data.js"></script>
+  <style type="text/css">
+    body {
+      font-family: tahoma, verdana, helvetica;
+      font-size: 0.8em;
+      padding: 10px;
+    }
+  </style>
+  <title>Vue and jQuery Gantt</title>
+</head>
+
+<body>
+
+  <div id="ganttChart">
+    <div class="ganttview"
+         :id="id">
+      <!-- 左半边项目条 -->
+      <div class="ganttview-vtheader">
+        <div class="ganttview-vtheader-item"
+             v-for="item in datas">
+          <div class="ganttview-vtheader-item-name">{{item.name}}</div>
+          <div class="ganttview-vtheader-series">
+            <div class="ganttview-vtheader-series-name"
+                 v-for="p in item.series">{{p.name}}</div>
+          </div>
+        </div>
+      </div>
+      <!-- 左半边项目条 -->
+      <div class="ganttview-slide-container">
+        <!-- 日期和小时部分块 -->
+        <div class="ganttview-hzheader"
+             :style="{width:(hzheaderTotalWidth+2)+'px'}">
+          <div class="ganttview-hzheader-months">
+            <div class="ganttview-hzheader-month"
+                 v-for="i in (dateDiff[1]+1)"
+                 :style="{width: getHzHeaderMonthWith(props.start.clone().add(i-1,'d'))+'px'}">{{props.start.clone().add(i-1,'d').format("MM/DD")}}</div>
+          </div>
+          <div class="ganttview-hzheader-days">
+            <div class="ganttview-hzheader-day"
+                 v-for="i in hourList">{{i}}</div>
+          </div>
+        </div>
+        <!-- 日期和小时部分块 -->
+        <div style="clear: both;"></div>
+        <!-- 网格部分 -->
+        <div class="ganttview-grid"
+             :style="{width:(hzheaderTotalWidth+2)+'px'}">
+          <div class="ganttview-grid-row"
+               v-for="item in countRow">
+            <div class="ganttview-grid-row-cell"
+                 :class="[i==0?'ganttview-weekend':'']"
+                 v-for="i in hourList"></div>
+          </div>
+        </div>
+        <!-- 网格部分 -->
+        <!-- 可操作的容器块部分 -->
+        <div class="ganttview-blocks">
+          <div class="ganttview-block-container"
+               style="position: relative;"
+               :style="{width:(hzheaderTotalWidth+2)+'px'}"
+               v-for="item in allRow">
+            <div class="ganttview-block"
+                 style="position: absolute;opacity: 0.5;"
+                 :style="{width:calBlockWidth(item)+'px','background-color':randomColor(),'margin-left':calMarginLeft(item)+'px'}"
+                 title="Planned, 16 days">
+              <div class="ganttview-block-text">15</div>
+            </div>
+            <!-- 生成碰撞用的block -->
+            <div v-if="hitBlock"
+                 class="ganttview-block"
+                 style="position: absolute;opacity: 0.5;"
+                 :style="{width:calBlockWidth(item)+'px','background-color':randomColor(),'margin-left':calMarginLeftRandom(item)+'px'}"
+                 title="Planned, 16 days">
+              <div class="ganttview-block-text">16</div>
+            </div>
+            <!-- 生成碰撞用的block -->
+          </div>
+        </div>
+        <!-- 可操作的容器块部分 -->
+      </div>
+    </div>
+    <br />
+    <button @click="hitBlock=!hitBlock">开启碰撞块</button>
+  </div>
+  <br />
+  <br />
+  <div id="eventMessage"></div>
+
+
+  <script>
+    //配置
+    const defaults = {
+      cellWidth: 21,
+      cellHeight: 31,
+      start: moment(),
+      end: moment().add(3, 'd').add(18, 'h').add(1, 's'),
+    };
+    new Vue({
+      el: '#ganttChart',
+      data: {
+        datas: ganttData,
+        props: defaults,
+        hitBlock: false,
+      },
+      computed: {
+        //天数差,小时差
+        dateDiff() {
+          return [this.props.end.diff(this.props.start,
+            'h'), this.props.end.date() - this.props.start.date()];
+        },
+        //获取小时列表
+        hourList() {
+          let temp = [];
+          let start = this.props.start.clone()
+          let end = this.props.end.clone()
+          while (start.isBefore(end)) {
+            temp.push(start.hour());
+            start.add(1, 'h');
+          }
+          temp.push(start.hour());
+          return temp;
+        },
+        //其中2代表前后各加一个小时
+        hzheaderTotalWidth() {
+          let x = this.props.end;
+          return ((this.props.end.diff(this.props.start,
+            'h') + 2) * this.props.cellWidth)
+        },
+        countRow() {
+          let count = 0;
+          for (item of this.datas) {
+            count += item.series.length
+          }
+          return count;
+        },
+        allRow() {
+          let temp = [];
+          for (item of this.datas) {
+            temp.push(...item.series)
+          }
+          return temp;
+        }
+      },
+      watch: {
+        //数据变动时重新绑定
+        datas() {
+          this.$nextTick(() => {
+            this.initBind()
+          })
+        },
+        hitBlock() {
+          this.$nextTick(() => {
+            this.initBind()
+          })
+        }
+      },
+      created() {},
+      mounted() {
+        //初始绑定
+        $(window).resize(this.resizeWidth);
+        this.initBind()
+      },
+
+      methods: {
+        initBind() {
+          this.bindBlockResize($('.ganttview-slide-container'), this.props.cellWidth);
+          this.bindBlockDrag($('.ganttview-slide-container'), this.props.cellWidth);
+          this.bindToolTip($('.ganttview-slide-container'));
+          this.bindBlockClick($('.ganttview-slide-container'));
+        },
+        //计算block的width
+        calBlockWidth(data) {
+          return data.end.diff(data.start, 'h', true) * this.props.cellWidth
+        },
+        //计算block的margin-left
+        calMarginLeft(data) {
+          return data.start.diff(this.props.start, 'h', true) * this.props.cellWidth
+        },
+        //test
+        calMarginLeftRandom(data) {
+          let w = this.calBlockWidth(data)
+          return (data.start.diff(this.props.start, 'h', true) *
+            this.props.cellWidth) + w + (parseInt((Math.random() * (0 -
+              100) + 100)
+            .toFixed(
+              0)))
+        },
+        //随机颜色
+        randomColor() {
+          return '#' + (~~(Math.random() * (1 << 24))).toString(16)
+        },
+        //计算ganttganttview-slide-container容器的宽度
+        resizeWidth() {
+          let ganttViewW = $('.ganttview').innerWidth();
+          let ganttVtHeaderW = $('.ganttview-vtheader').outerWidth();
+          $('.ganttview-slide-container').outerWidth(ganttViewW -
+            ganttVtHeaderW)
+        },
+        //计算每天的MM/DD的block长度
+        getHzHeaderMonthWith(date) {
+          let width;
+          if (date.format("MM/DD") == this.props.start.format("MM/DD")) {
+            width = (24 - (this.props.start.hour() - 1)) * this.props.cellWidth;
+          } else if (date.format("MM/DD") == this.props.end.format(
+              "MM/DD")) {
+            width = (this.props.end.hour() + 1) * this.props.cellWidth
+          } else {
+            width = 24 * this.props.cellWidth
+          }
+          return width - 1
+        },
+        //绑定事件
+        bindBlockResize(div, cellWidth, startDate, callback) {
+          let prev; //前一个兄弟节点
+          let next; //后一个兄弟节点
+          let self; //自身
+          //记录碰撞时的最大width和left
+          let maxWidth = null;
+          let maxLeft = null;
+          //锁定碰撞时的数据
+          let lock = false;
+
+          let maxLeftMargin = null; //null代表不限制
+          let minLeftMargin = null;
+          jQuery("div.ganttview-block", div).resizable({
+            //grid: cellWidth,
+            handles: "e,w",
+            start() {
+              prev = jQuery(this).prev()[0] ? jQuery(jQuery(this).prev()[
+                0]) : null;
+              next = jQuery(this).next()[0] ? jQuery(jQuery(this).next()[
+                0]) : null;
+              self = jQuery(this);
+              if (prev) {
+
+                let ml = parseFloat(prev.css("margin-left"));
+                let left = parseFloat(prev.css("left")) || 0;
+                let eW = parseFloat(prev.outerWidth());
+                minLeftMargin = ml + left + eW;
+              } else {
+                minLeftMargin = null;
+              }
+
+              if (next) {
+                let ml = parseFloat(next.css("margin-left"));
+                let left = parseFloat(next.css("left")) || 0;
+                maxLeftMargin = ml + left;
+              } else {
+                maxLeftMargin = null;
+              }
+            },
+            resize() {
+              let ml = parseFloat(self.css("margin-left"));
+              let left = parseFloat(self.css("left")) || 0;
+              let eW = parseFloat(self.outerWidth());
+              let hit = false;
+              //计算左边是否碰撞
+              if (minLeftMargin) {
+                if ((ml + left) < minLeftMargin) {
+                  console.log('left hit');
+                  hit = true;
+                  if (!lock) {
+                    maxWidth = eW
+                    maxLeft = left
+                    lock = true;
+                  }
+                  console.log('%cmaxWidth:', 'background-color:#' + (~~
+                      (
+                        Math.random() * (1 << 24))).toString(16) +
+                    ';color:white;padding:4px',
+                    maxWidth);
+                  console.log('%cmaxLeft:', 'background-color:#' + (~~(
+                      Math.random() * (1 << 24))).toString(16) +
+                    ';color:white;padding:4px', maxLeft);
+                  //event.preventDefault();
+                  //修正位置
+                  self.css("max-width", maxWidth)
+                }
+              }
+              if (maxLeftMargin) { //计算右边是否碰撞
+                if ((ml + left + eW) > maxLeftMargin) {
+                  console.log('right hit');
+                  hit = true;
+
+                  if (!lock) {
+                    maxWidth = eW
+                    maxLeft = left
+                    lock = true;
+                  }
+                  console.log('%cmaxWidth:', 'background-color:#' + (~~
+                      (
+                        Math.random() * (1 << 24))).toString(16) +
+                    ';color:white;padding:4px',
+                    maxWidth);
+                  console.log('%cmaxLeft:', 'background-color:#' + (~~(
+                      Math.random() * (1 << 24))).toString(16) +
+                    ';color:white;padding:4px', maxLeft);
+                  //event.preventDefault();
+                  //修正位置
+                  self.css("max-width", maxWidth)
+                }
+              }
+              if (!hit) {
+                console.log('not hit')
+                self.css('max-width', '');
+                maxWidth = null;
+                maxLeft = null;
+                lock = false;
+              }
+
+            },
+            stop() {
+              if (maxWidth) {
+                if (maxLeft != 0) {
+                  self.outerWidth(maxWidth)
+                  self.css('left', 0)
+                  self.css('margin-left', minLeftMargin)
+                } else {
+                  self.outerWidth(maxLeftMargin - parseFloat(self.css(
+                    'margin-left')))
+                }
+              }
+              //重置
+              self.css('max-width', '');
+              maxWidth = null;
+              maxLeft = null;
+              lock = false
+
+            }
+          });
+        },
+
+        bindBlockDrag(div, cellWidth, startDate, callback) {
+          let prev; //前一个兄弟节点
+          let next; //后一个兄弟节点
+          let self; //自身
+          let maxLeftMargin = 0; //-1值代表不限制
+          let minLeftMargin = 0;
+          jQuery("div.ganttview-block", div).draggable({
+            axis: "x",
+            scroll: true,
+            //containment: 'parent',
+            start() {
+
+              prev = jQuery(this).prev()[0] ? jQuery(jQuery(this).prev()[
+                0]) : null;
+              next = jQuery(this).next()[0] ? jQuery(jQuery(this).next()[
+                0]) : null;
+              self = jQuery(this);
+              if (prev) {
+                let ml = parseFloat(prev.css("margin-left"));
+                let left = parseFloat(prev.css("left")) || 0;
+                let eW = parseFloat(prev.outerWidth());
+                minLeftMargin = ml + left + eW;
+              } else {
+                minLeftMargin = -1;
+              }
+
+              if (next) {
+                let ml = parseFloat(next.css("margin-left"));
+                let left = parseFloat(next.css("left")) || 0;
+                maxLeftMargin = ml + left;
+              } else {
+                maxLeftMargin = -1;
+              }
+            },
+            drag(event) {
+              let ml = parseFloat(self.css("margin-left"));
+              let left = parseFloat(self.css("left")) || 0;
+              let eW = parseFloat(self.outerWidth());
+              console.log('%cminLeftMargin:', 'background-color:#' + (~
+                  ~(Math.random() * (1 << 24))).toString(16) +
+                ';color:white;padding:4px', minLeftMargin);
+              console.log('%cmaxLeftMargin:', 'background-color:#' + (~
+                  ~(Math.random() * (1 << 24))).toString(16) +
+                ';color:white;padding:4px', maxLeftMargin);
+              console.log('%cml + left:', 'background-color:#' + (~~(
+                  Math.random() * (1 << 24))).toString(16) +
+                ';color:white;padding:4px', ml +
+                left);
+              console.log('%cml + left + eW:', 'background-color:#' + (
+                  ~~(Math.random() * (1 << 24))).toString(16) +
+                ';color:white;padding:4px', ml +
+                left +
+                eW);
+              //计算左边是否碰撞
+              if (minLeftMargin != -1) {
+                if ((ml + left) < minLeftMargin) {
+                  console.log('left hit');
+                  event.preventDefault();
+                  //修正位置
+                  self.css("left", 0)
+                  self.css("margin-left", minLeftMargin)
+                }
+              }
+              //计算右边是否碰撞
+              if (maxLeftMargin != -1) {
+                if ((ml + left + eW) > maxLeftMargin) {
+                  console.log('right hit');
+                  event.preventDefault();
+                  //修正位置
+                  self.css("left", 0)
+                  self.css("margin-left", maxLeftMargin - self.outerWidth())
+                }
+              }
+            },
+            stop() {
+              var block = jQuery(this);
+              //计算节点位置
+              self.css("margin-left", parseFloat(self.css('margin-left')) +
+                parseFloat(self.css(
+                  'left')))
+              self.css('left', 0)
+            }
+          });
+        },
+        bindToolTip(div) {
+          jQuery("div.ganttview-block").tooltip();
+        },
+        bindBlockClick(div) {
+          jQuery("div.ganttview-block", div).on("click", function() {
+            console.log('%cclick:', 'background-color:#' + (~~(Math.random() *
+              (1 << 24))).toString(16) + ';color:white;padding:4px');
+          });
+        },
+      }
+
+    })
+  </script>
+
+</body>
+
+</html>
