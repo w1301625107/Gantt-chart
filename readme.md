@@ -1,5 +1,5 @@
 # Gantt 图
-使用Vue来进行数据管理的Gantt图，通过jQueryUI来实现拖拽缩放功能
+使用Vue来进行数据管理的Gantt图，通过jQueryUI来实现拖拽缩放功能,同时带有碰撞的控制功能
 # 截图
 
 ![home_page](https://raw.githubusercontent.com/w1301625107/Gantt-chart/master/screenshots/01.png)

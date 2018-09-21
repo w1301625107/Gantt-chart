@@ -29,10 +29,8 @@
 </head>
 
 <body>
-
   <div id="ganttChart">
-    <div class="ganttview"
-         :id="id">
+    <div class="ganttview">
       <!-- 左半边项目条 -->
       <div class="ganttview-vtheader">
         <div class="ganttview-vtheader-item"
@@ -80,7 +78,7 @@
                v-for="item in allRow">
             <div class="ganttview-block"
                  style="position: absolute;opacity: 0.5;"
-                 :style="{width:calBlockWidth(item)+'px','background-color':randomColor(),'margin-left':calMarginLeft(item)+'px'}"
+                 :style="{width:calBlockWidth(item)+'px','background-color':randomColor(),'left':calLeft(item)+'px'}"
                  title="Planned, 16 days">
               <div class="ganttview-block-text">15</div>
             </div>
@@ -88,7 +86,7 @@
             <div v-if="hitBlock"
                  class="ganttview-block"
                  style="position: absolute;opacity: 0.5;"
-                 :style="{width:calBlockWidth(item)+'px','background-color':randomColor(),'margin-left':calMarginLeftRandom(item)+'px'}"
+                 :style="{width:calBlockWidth(item)+'px','background-color':randomColor(),'left':calLeftRandom(item)+'px'}"
                  title="Planned, 16 days">
               <div class="ganttview-block-text">16</div>
             </div>
@@ -100,11 +98,10 @@
     </div>
     <br />
     <button @click="hitBlock=!hitBlock">开启碰撞块</button>
+    <div >{{eventMessage}}</div>
   </div>
   <br />
   <br />
-  <div id="eventMessage"></div>
-
 
   <script>
     //配置
@@ -120,6 +117,7 @@
         datas: ganttData,
         props: defaults,
         hitBlock: false,
+        eventMessage:"",
       },
       computed: {
         //天数差,小时差
@@ -182,21 +180,22 @@
 
       methods: {
         initBind() {
-          this.bindBlockResize($('.ganttview-slide-container'), this.props.cellWidth);
-          this.bindBlockDrag($('.ganttview-slide-container'), this.props.cellWidth);
-          this.bindToolTip($('.ganttview-slide-container'));
-          this.bindBlockClick($('.ganttview-slide-container'));
+          //可以带一个回调函数参数
+          this.bindBlockResize();
+          this.bindBlockDrag();
+          this.bindToolTip();
+          this.bindBlockClick();
         },
         //计算block的width
         calBlockWidth(data) {
           return data.end.diff(data.start, 'h', true) * this.props.cellWidth
         },
         //计算block的margin-left
-        calMarginLeft(data) {
+        calLeft(data) {
           return data.start.diff(this.props.start, 'h', true) * this.props.cellWidth
         },
         //test
-        calMarginLeftRandom(data) {
+        calLeftRandom(data) {
           let w = this.calBlockWidth(data)
           return (data.start.diff(this.props.start, 'h', true) *
             this.props.cellWidth) + w + (parseInt((Math.random() * (0 -
@@ -228,22 +227,22 @@
           }
           return width - 1
         },
-        //绑定事件
-        bindBlockResize(div, cellWidth, startDate, callback) {
+        //以下绑定事件
+        bindBlockResize(callback) {
+          let borderSize = 2;
           let prev; //前一个兄弟节点
           let next; //后一个兄弟节点
           let self; //自身
-          //记录碰撞时的最大width和left
+          //记录碰撞时的最大width
           let maxWidth = null;
-          let maxLeft = null;
+          let hitLeft = false
           //锁定碰撞时的数据
           let lock = false;
-
           let maxLeftMargin = null; //null代表不限制
           let minLeftMargin = null;
-          jQuery("div.ganttview-block", div).resizable({
-            //grid: cellWidth,
+          jQuery("div.ganttview-block").resizable({
             handles: "e,w",
+            containment: 'parent',
             start() {
               prev = jQuery(this).prev()[0] ? jQuery(jQuery(this).prev()[
                 0]) : null;
@@ -251,196 +250,161 @@
                 0]) : null;
               self = jQuery(this);
               if (prev) {
-
-                let ml = parseFloat(prev.css("margin-left"));
-                let left = parseFloat(prev.css("left")) || 0;
-                let eW = parseFloat(prev.outerWidth());
-                minLeftMargin = ml + left + eW;
+                let pleft = parseFloat(prev.css("left")) || 0;
+                let pwidth = parseFloat(prev.width()) + borderSize;
+                minLeftMargin = pleft + pwidth
               } else {
                 minLeftMargin = null;
               }
-
               if (next) {
-                let ml = parseFloat(next.css("margin-left"));
-                let left = parseFloat(next.css("left")) || 0;
-                maxLeftMargin = ml + left;
+                let nleft = parseFloat(next.css("left")) || 0;
+                maxLeftMargin = nleft;
               } else {
                 maxLeftMargin = null;
               }
             },
-            resize() {
-              let ml = parseFloat(self.css("margin-left"));
-              let left = parseFloat(self.css("left")) || 0;
-              let eW = parseFloat(self.outerWidth());
+            resize(event, ui) {
+              let {
+                left = 0
+              } = ui.position;
+              let {
+                width
+              } = ui.size;
               let hit = false;
-              //计算左边是否碰撞
+
               if (minLeftMargin) {
-                if ((ml + left) < minLeftMargin) {
+                if (left < minLeftMargin) {
                   console.log('left hit');
                   hit = true;
-                  if (!lock) {
-                    maxWidth = eW
-                    maxLeft = left
-                    lock = true;
-                  }
-                  console.log('%cmaxWidth:', 'background-color:#' + (~~
-                      (
-                        Math.random() * (1 << 24))).toString(16) +
-                    ';color:white;padding:4px',
-                    maxWidth);
-                  console.log('%cmaxLeft:', 'background-color:#' + (~~(
-                      Math.random() * (1 << 24))).toString(16) +
-                    ';color:white;padding:4px', maxLeft);
-                  //event.preventDefault();
-                  //修正位置
-                  self.css("max-width", maxWidth)
+                  hitLeft = true;
                 }
               }
               if (maxLeftMargin) { //计算右边是否碰撞
-                if ((ml + left + eW) > maxLeftMargin) {
+                if ((left + width + borderSize) > maxLeftMargin) {
                   console.log('right hit');
                   hit = true;
-
-                  if (!lock) {
-                    maxWidth = eW
-                    maxLeft = left
-                    lock = true;
-                  }
-                  console.log('%cmaxWidth:', 'background-color:#' + (~~
-                      (
-                        Math.random() * (1 << 24))).toString(16) +
-                    ';color:white;padding:4px',
-                    maxWidth);
-                  console.log('%cmaxLeft:', 'background-color:#' + (~~(
-                      Math.random() * (1 << 24))).toString(16) +
-                    ';color:white;padding:4px', maxLeft);
-                  //event.preventDefault();
-                  //修正位置
-                  self.css("max-width", maxWidth)
                 }
               }
-              if (!hit) {
-                console.log('not hit')
+              if (hit) {
+                if (!lock) {
+                  if (hitLeft) {
+                    maxWidth = ui.originalPosition.left + ui.originalSize
+                      .width - minLeftMargin;
+                  } else {
+                    maxWidth = maxLeftMargin - ui.originalPosition.left -
+                      borderSize
+                  }
+                  lock = true;
+                }
+                event.preventDefault();
+                //TOFIXED：固定最大宽度，因为event.preventDefault()不起暂停作用
+                self.css("max-width", maxWidth)
+              } else {
                 self.css('max-width', '');
                 maxWidth = null;
-                maxLeft = null;
                 lock = false;
               }
-
             },
             stop() {
               if (maxWidth) {
-                if (maxLeft != 0) {
-                  self.outerWidth(maxWidth)
-                  self.css('left', 0)
-                  self.css('margin-left', minLeftMargin)
-                } else {
-                  self.outerWidth(maxLeftMargin - parseFloat(self.css(
-                    'margin-left')))
+                self.width(maxWidth);
+                if (hitLeft) {
+                  self.css("left", minLeftMargin)
                 }
               }
               //重置
               self.css('max-width', '');
               maxWidth = null;
-              maxLeft = null;
-              lock = false
-
+              lock = false;
+              if (callback) {
+                callback(jQuery(this))
+              }
             }
           });
         },
 
-        bindBlockDrag(div, cellWidth, startDate, callback) {
+        bindBlockDrag(callback) {
+          let borderSize = 2;
           let prev; //前一个兄弟节点
           let next; //后一个兄弟节点
           let self; //自身
           let maxLeftMargin = 0; //-1值代表不限制
           let minLeftMargin = 0;
-          jQuery("div.ganttview-block", div).draggable({
+          jQuery("div.ganttview-block").draggable({
             axis: "x",
             scroll: true,
-            //containment: 'parent',
+            containment: 'parent',
             start() {
-
               prev = jQuery(this).prev()[0] ? jQuery(jQuery(this).prev()[
                 0]) : null;
               next = jQuery(this).next()[0] ? jQuery(jQuery(this).next()[
                 0]) : null;
               self = jQuery(this);
               if (prev) {
-                let ml = parseFloat(prev.css("margin-left"));
-                let left = parseFloat(prev.css("left")) || 0;
-                let eW = parseFloat(prev.outerWidth());
-                minLeftMargin = ml + left + eW;
+                let pleft = parseFloat(prev.css("left")) || 0;
+                let pwidth = parseFloat(prev.width()) + borderSize;
+                minLeftMargin = pleft + pwidth
               } else {
-                minLeftMargin = -1;
+                minLeftMargin = null;
               }
-
               if (next) {
-                let ml = parseFloat(next.css("margin-left"));
-                let left = parseFloat(next.css("left")) || 0;
-                maxLeftMargin = ml + left;
+                let nleft = parseFloat(next.css("left")) || 0;
+                maxLeftMargin = nleft;
               } else {
-                maxLeftMargin = -1;
+                maxLeftMargin = null;
               }
             },
-            drag(event) {
-              let ml = parseFloat(self.css("margin-left"));
-              let left = parseFloat(self.css("left")) || 0;
-              let eW = parseFloat(self.outerWidth());
-              console.log('%cminLeftMargin:', 'background-color:#' + (~
-                  ~(Math.random() * (1 << 24))).toString(16) +
-                ';color:white;padding:4px', minLeftMargin);
-              console.log('%cmaxLeftMargin:', 'background-color:#' + (~
-                  ~(Math.random() * (1 << 24))).toString(16) +
-                ';color:white;padding:4px', maxLeftMargin);
-              console.log('%cml + left:', 'background-color:#' + (~~(
-                  Math.random() * (1 << 24))).toString(16) +
-                ';color:white;padding:4px', ml +
-                left);
-              console.log('%cml + left + eW:', 'background-color:#' + (
-                  ~~(Math.random() * (1 << 24))).toString(16) +
-                ';color:white;padding:4px', ml +
-                left +
-                eW);
+            drag(event, ui) {
+              let {
+                left = 0
+              } = ui.position;
+              let width = self.width();
+              let hit = false;
+              let hitLeft = false;
+
               //计算左边是否碰撞
-              if (minLeftMargin != -1) {
-                if ((ml + left) < minLeftMargin) {
+              if (minLeftMargin) {
+                if (left < minLeftMargin) {
                   console.log('left hit');
-                  event.preventDefault();
-                  //修正位置
-                  self.css("left", 0)
-                  self.css("margin-left", minLeftMargin)
+                  hit = true;
+                  hitLeft = true;
                 }
               }
               //计算右边是否碰撞
-              if (maxLeftMargin != -1) {
-                if ((ml + left + eW) > maxLeftMargin) {
+              if (maxLeftMargin) {
+                if ((left + width + borderSize) > maxLeftMargin) {
                   console.log('right hit');
-                  event.preventDefault();
-                  //修正位置
-                  self.css("left", 0)
-                  self.css("margin-left", maxLeftMargin - self.outerWidth())
+                  hit = true;
                 }
+              }
+              if (hit) {
+                event.preventDefault();
+                //因为获取的left不准，需要手动修正
+                let fixLeft;
+                if (hitLeft) {
+                  fixLeft = minLeftMargin
+                } else {
+                  fixLeft = maxLeftMargin - width - borderSize
+                }
+                self.css("left", fixLeft)
               }
             },
             stop() {
-              var block = jQuery(this);
-              //计算节点位置
-              self.css("margin-left", parseFloat(self.css('margin-left')) +
-                parseFloat(self.css(
-                  'left')))
-              self.css('left', 0)
+              if (callback) {
+                callback(jQuery(this))
+              }
+            }
+          });
+        },
+        bindBlockClick(callback) {
+          jQuery("div.ganttview-block").on("click", function() {
+            if (callback) {
+              callback(jQuery(this))
             }
           });
         },
         bindToolTip(div) {
           jQuery("div.ganttview-block").tooltip();
-        },
-        bindBlockClick(div) {
-          jQuery("div.ganttview-block", div).on("click", function() {
-            console.log('%cclick:', 'background-color:#' + (~~(Math.random() *
-              (1 << 24))).toString(16) + ';color:white;padding:4px');
-          });
         },
       }
 
