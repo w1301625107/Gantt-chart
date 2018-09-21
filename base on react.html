@@ -1,0 +1,195 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
+   "http://www.w3.org/TR/html4/strict.dtd">
+
+<html lang="en">
+
+<head>
+  <link rel="stylesheet"
+        type="text/css"
+        href="reset.css" />
+  <link rel="stylesheet"
+        type="text/css"
+        href="./jquery.ganttView.css" />
+  <link href="./lib/jquery-ui.css"
+        rel="stylesheet">
+  <script src="./lib/jquery.js"></script>
+  <script src="./lib/jquery-ui.js"></script>
+  <script src="./lib/babel.min.js"></script>
+  <script src="./lib/react.development.js"></script>
+  <script src="./lib/react-dom.development.js"></script>
+  <script src="./lib/moment.js"></script>
+  <script type="text/javascript"
+          src="data.js"></script>
+  <style type="text/css">
+    body {
+      font-family: tahoma, verdana, helvetica;
+      font-size: 0.8em;
+      padding: 10px;
+    }
+  </style>
+  <title>React and jQuery Gantt</title>
+</head>
+
+<body>
+  <div id="ganttChart"></div>
+  <script type="text/babel">
+    const defaults = {
+      cellWidth: 21,
+      cellHeight: 31,
+      start: moment(),
+      end: moment().add(3, 'd').add(18, 'h').add(1, 's'),
+    };
+
+    class Gantt extends React.Component{
+      constructor(props) {
+        super(props);
+        this.state = {
+          datas: ganttData,
+          props: defaults,
+          hitBlock: false,
+        };
+      }
+      
+      toNumArray = (num) => {
+        let temp=[];
+        for(let i = 0; i< num;i++){
+          temp.push(i)
+        }
+        console.log(temp)
+        return temp;
+      }
+     
+      //天数差,小时差
+      dateDiff = () => {
+        let { start, end} = this.state.props;
+        return [end.diff(start,'h'), end.date() - start.date()];
+      }
+
+       //获取小时列表
+      hourList = () => {
+        let temp = [];
+        let start = this.state.props.start.clone()
+        let end = this.state.props.end.clone()
+        while (start.isBefore(end)) {
+          temp.push(start.hour());
+          start.add(1, 'h');
+        }
+        temp.push(start.hour());
+        return temp;
+      }
+
+      countRow = () => {
+        let count = 0;
+        for (let item of this.state.datas) {
+          count += item.series.length
+        }
+        return count
+      }
+
+      //其中2代表前后各加一个小时
+      hzheaderTotalWidth = () => {
+        let { start, end, cellWidth }=this.state.props;
+        return ((end.diff(start,'h') + 2) * cellWidth)
+      }
+      
+      //计算每天的MM/DD的block长度
+      getHzHeaderMonthWith = (date) => {
+        let width;
+        let { start, end, cellWidth }=this.state.props;
+        if (date.format("MM/DD") == start.format("MM/DD")) {
+          width = (24 - (start.hour() - 1)) * cellWidth;
+        } else if (date.format("MM/DD") == end.format(
+            "MM/DD")) {
+          width = (end.hour() + 1) * cellWidth
+        } else {
+          width = 24 *cellWidth
+        }
+        return width - 1
+      }
+
+      componentDidMount() {
+        $(window).resize(this.resizeWidth);
+      }
+
+      //计算ganttganttview-slide-container容器的宽度
+      resizeWidth = () => {
+        console.log('go')
+        let ganttViewW = $('.ganttview').innerWidth();
+        let ganttVtHeaderW = $('.ganttview-vtheader').outerWidth();
+        $('.ganttview-slide-container').outerWidth(ganttViewW -
+          ganttVtHeaderW)
+      }
+
+     
+      render(){
+        let {datas} = this.state;
+        let {start}  = this.state.props
+        return (
+          <div className="ganttview">
+            {/*左半边项目条*/}
+            <div className="ganttview-vtheader">
+              {datas.map((item)=>
+                <div className="ganttview-vtheader-item" key={item.id}>
+                  <div className="ganttview-vtheader-item-name">{item.name}</div>
+                    <div className="ganttview-vtheader-series">
+                    {item.series.map((p)=>
+                      <div className="ganttview-vtheader-series-name" key={p.id} >{p.name}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            {/*左半边项目条*/}
+            <div className="ganttview-slide-container">
+              {/*  日期和小时部分块 */}
+              <div className="ganttview-hzheader"
+                  style={{width:this.hzheaderTotalWidth()+'px'}}>
+                <div className="ganttview-hzheader-months">
+                  {
+                    this.toNumArray(this.dateDiff()[1]+1).map((i)=>(
+                      <div className="ganttview-hzheader-month"
+                      style={{width: this.getHzHeaderMonthWith(start.clone().add(i,'d'))+'px'}}>{start.clone().add(i,'d').format("MM/DD")}</div>
+                     ))
+                  }
+                </div>
+                <div className="ganttview-hzheader-days">
+                  {
+                    this.hourList().map((i)=>(
+                      <div className="ganttview-hzheader-day"
+                     >{i}</div>
+                    ))
+                  }
+                </div>
+              </div>
+              {/*日期和小时部分块*/}
+              { /* <!-- 网格部分 --> */}
+              <div style={{clear: 'both'}}></div>
+              <div className="ganttview-grid"
+                  style={{width:this.hzheaderTotalWidth()+'px'}}>
+                {
+                  this.toNumArray(this.countRow()).map(() =>(
+                    <div className="ganttview-grid-row">
+                      {
+                        this.hourList().map((i)=>(
+                          <div className={i==0?'ganttview-grid-row-cell ganttview-weekend':'ganttview-grid-row-cell'}></div>
+                        ))
+                      }
+                    </div>
+                  ))
+                }
+              </div>
+              {/*  <!-- 网格部分 --> */}
+            </div>
+          </div>
+        )
+      }
+    }
+
+    ReactDOM.render(
+      <Gantt/>,
+      document.getElementById('ganttChart')
+    );
+  </script>
+</body>
+
+</html>

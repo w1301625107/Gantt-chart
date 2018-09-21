@@ -61,7 +61,7 @@
         <div style="clear: both;"></div>
         <!-- 网格部分 -->
         <div class="ganttview-grid"
-             :style="{width:(hzheaderTotalWidth+2)+'px'}">
+             :style="{width:(hzheaderTotalWidth)+'px'}">
           <div class="ganttview-grid-row"
                v-for="item in countRow">
             <div class="ganttview-grid-row-cell"
@@ -74,7 +74,7 @@
         <div class="ganttview-blocks">
           <div class="ganttview-block-container"
                style="position: relative;"
-               :style="{width:(hzheaderTotalWidth+2)+'px'}"
+               :style="{width:(hzheaderTotalWidth)+'px'}"
                v-for="item in allRow">
             <div class="ganttview-block"
                  style="position: absolute;opacity: 0.5;"
