@@ -46,7 +46,7 @@
       <div class="ganttview-slide-container">
         <!-- 日期和小时部分块 -->
         <div class="ganttview-hzheader"
-             :style="{width:(hzheaderTotalWidth+2)+'px'}">
+             :style="{width:(hzheaderTotalWidth)+'px'}">
           <div class="ganttview-hzheader-months">
             <div class="ganttview-hzheader-month"
                  v-for="i in (dateDiff[1]+1)"
@@ -109,7 +109,7 @@
       cellWidth: 21,
       cellHeight: 31,
       start: moment(),
-      end: moment().add(3, 'd').add(18, 'h').add(1, 's'),
+      end: moment().add(3, 'd').add(10, 'h').add(1, 's'),
     };
     new Vue({
       el: '#ganttChart',
@@ -134,14 +134,13 @@
             temp.push(start.hour());
             start.add(1, 'h');
           }
-          temp.push(start.hour());
+          //temp.push(start.hour());
           return temp;
         },
         //其中2代表前后各加一个小时
         hzheaderTotalWidth() {
-          let x = this.props.end;
           return ((this.props.end.diff(this.props.start,
-            'h') + 2) * this.props.cellWidth)
+            'h') + 1) * this.props.cellWidth)
         },
         countRow() {
           let count = 0;
@@ -218,7 +217,7 @@
         getHzHeaderMonthWith(date) {
           let width;
           if (date.format("MM/DD") == this.props.start.format("MM/DD")) {
-            width = (24 - (this.props.start.hour() - 1)) * this.props.cellWidth;
+            width = (24 - (this.props.start.hour() + 0)) * this.props.cellWidth;
           } else if (date.format("MM/DD") == this.props.end.format(
               "MM/DD")) {
             width = (this.props.end.hour() + 1) * this.props.cellWidth

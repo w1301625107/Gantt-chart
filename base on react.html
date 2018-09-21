@@ -37,7 +37,7 @@
       cellWidth: 21,
       cellHeight: 31,
       start: moment(),
-      end: moment().add(3, 'd').add(18, 'h').add(1, 's'),
+      end: moment().add(3, 'd').add(1, 's'),
     };
 
     class Gantt extends React.Component{
@@ -73,7 +73,7 @@
           temp.push(start.hour());
           start.add(1, 'h');
         }
-        temp.push(start.hour());
+        //temp.push(start.hour());
         return temp;
       }
 
@@ -88,7 +88,7 @@
       //其中2代表前后各加一个小时
       hzheaderTotalWidth = () => {
         let { start, end, cellWidth }=this.state.props;
-        return ((end.diff(start,'h') + 2) * cellWidth)
+        return ((end.diff(start,'h') + 1) * cellWidth)
       }
       
       //计算每天的MM/DD的block长度
@@ -96,7 +96,7 @@
         let width;
         let { start, end, cellWidth }=this.state.props;
         if (date.format("MM/DD") == start.format("MM/DD")) {
-          width = (24 - (start.hour() - 1)) * cellWidth;
+          width = (24 - (start.hour() - 0)) * cellWidth;
         } else if (date.format("MM/DD") == end.format(
             "MM/DD")) {
           width = (end.hour() + 1) * cellWidth
@@ -225,6 +225,7 @@
               if ((left + width + borderSize) > maxLeftMargin) {
                 console.log('right hit');
                 hit = true;
+                hitLeft = false;
               }
             }
             if (hit) {
