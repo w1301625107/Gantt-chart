@@ -238,11 +238,17 @@
                 }
                 lock = true;
               }
+              //修正左缩放的位置
+              if (hitLeft) {
+              let fixRight = minLeftMargin - left;
+              self.css("margin-left", fixRight)
+              }
               event.preventDefault();
               //TOFIXED：固定最大宽度，因为event.preventDefault()不起暂停作用
               self.css("max-width", maxWidth)
             } else {
               self.css('max-width', '');
+              self.css("margin-left", "");
               maxWidth = null;
               lock = false;
             }
@@ -256,6 +262,7 @@
             }
             //重置
             self.css('max-width', '');
+            self.css("margin-left", "");
             maxWidth = null;
             lock = false;
             if (callback) {
@@ -352,7 +359,9 @@
       }
 
       test = () =>{
-        this.setState({hitBlock:true})
+        let { hitBlock } =this.state;
+        hitBlock =! hitBlock;
+        this.setState({hitBlock})
       }
 
      

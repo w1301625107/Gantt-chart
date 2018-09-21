@@ -98,7 +98,7 @@
     </div>
     <br />
     <button @click="hitBlock=!hitBlock">开启碰撞块</button>
-    <div >{{eventMessage}}</div>
+    <div>{{eventMessage}}</div>
   </div>
   <br />
   <br />
@@ -117,7 +117,7 @@
         datas: ganttData,
         props: defaults,
         hitBlock: false,
-        eventMessage:"",
+        eventMessage: "",
       },
       computed: {
         //天数差,小时差
@@ -251,8 +251,8 @@
               self = jQuery(this);
               if (prev) {
                 let pleft = parseFloat(prev.css("left")) || 0;
-                let pwidth = parseFloat(prev.width()) + borderSize;
-                minLeftMargin = pleft + pwidth
+                let pTwidth = parseFloat(prev.width()) + borderSize;
+                minLeftMargin = pleft + pTwidth
               } else {
                 minLeftMargin = null;
               }
@@ -283,6 +283,7 @@
                 if ((left + width + borderSize) > maxLeftMargin) {
                   console.log('right hit');
                   hit = true;
+                  hitLeft = false;
                 }
               }
               if (hit) {
@@ -296,11 +297,18 @@
                   }
                   lock = true;
                 }
+                //修正左缩放的位置
+                if (hitLeft) {
+                  let fixRight = minLeftMargin - left;
+                  self.css("margin-left", fixRight)
+                }
                 event.preventDefault();
                 //TOFIXED：固定最大宽度，因为event.preventDefault()不起暂停作用
                 self.css("max-width", maxWidth)
               } else {
+                //重置修正
                 self.css('max-width', '');
+                self.css("margin-left", "");
                 maxWidth = null;
                 lock = false;
               }
@@ -312,12 +320,13 @@
                   self.css("left", minLeftMargin)
                 }
               }
-              //重置
+              //重置修正
               self.css('max-width', '');
+              self.css("margin-left", "");
               maxWidth = null;
               lock = false;
               if (callback) {
-                callback(jQuery(this))
+                callback(self)
               }
             }
           });
@@ -342,8 +351,8 @@
               self = jQuery(this);
               if (prev) {
                 let pleft = parseFloat(prev.css("left")) || 0;
-                let pwidth = parseFloat(prev.width()) + borderSize;
-                minLeftMargin = pleft + pwidth
+                let pTwidth = parseFloat(prev.width()) + borderSize;
+                minLeftMargin = pleft + pTwidth
               } else {
                 minLeftMargin = null;
               }
@@ -391,7 +400,7 @@
             },
             stop() {
               if (callback) {
-                callback(jQuery(this))
+                callback(self)
               }
             }
           });
@@ -399,7 +408,7 @@
         bindBlockClick(callback) {
           jQuery("div.ganttview-block").on("click", function() {
             if (callback) {
-              callback(jQuery(this))
+              callback(self)
             }
           });
         },
