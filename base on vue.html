@@ -145,14 +145,14 @@
         },
         countRow() {
           let count = 0;
-          for (item of this.datas) {
+          for (let item of this.datas) {
             count += item.series.length
           }
           return count;
         },
         allRow() {
           let temp = [];
-          for (item of this.datas) {
+          for (let item of this.datas) {
             temp.push(...item.series)
           }
           return temp;
@@ -174,7 +174,7 @@
       created() {},
       mounted() {
         //初始绑定
-        $(window).resize(this.resizeWidth);
+        //$(window).resize(this.resizeWidth);
         this.initBind()
       },
 

@@ -55,7 +55,6 @@
         for(let i = 0; i< num;i++){
           temp.push(i)
         }
-        console.log(temp)
         return temp;
       }
      
@@ -107,8 +106,49 @@
         return width - 1
       }
 
+      allRow = () => {
+        let temp = [];
+        for (let item of this.state.datas) {
+          temp.push(...item.series)
+        }
+        return temp;
+      }
+
+      //计算block的width
+      calBlockWidth = (data) => {
+        let { cellWidth }=this.state.props;
+        return data.end.diff(data.start, 'h', true) * cellWidth
+      }
+
+      //计算block的margin-left
+      calLeft = (data) => {
+        let { start,  cellWidth }=this.state.props;
+        return data.start.diff(start, 'h', true) * cellWidth
+      }
+
+      //test
+      calLeftRandom = (data) => {
+        let { start,  cellWidth }=this.state.props;
+        let w = this.calBlockWidth(data)
+        return (data.start.diff(start, 'h', true) *
+          cellWidth) + w + (parseInt((Math.random() * (0 -
+            100) + 100)
+          .toFixed(
+            0)))
+      }
+
+      //随机颜色
+      randomColor = () => {
+        return '#' + (~~(Math.random() * (1 << 24))).toString(16)
+      }
+
       componentDidMount() {
-        $(window).resize(this.resizeWidth);
+        //$(window).resize(this.resizeWidth);
+        this.initBind();
+      }
+
+      componentDidUpdate(){
+        this.initBind();
       }
 
       //计算ganttganttview-slide-container容器的宽度
@@ -120,9 +160,204 @@
           ganttVtHeaderW)
       }
 
+      //以下绑定事件
+
+      initBind =()=> {
+        //可以带一个回调函数参数
+        this.bindBlockResize();
+        this.bindBlockDrag();
+        this.bindToolTip();
+        this.bindBlockClick();
+      }
+
+      bindBlockResize = (callback) => {
+        let borderSize = 2;
+        let prev; //前一个兄弟节点
+        let next; //后一个兄弟节点
+        let self; //自身
+        //记录碰撞时的最大width
+        let maxWidth = null;
+        let hitLeft = false
+        //锁定碰撞时的数据
+        let lock = false;
+        let maxLeftMargin = null; //null代表不限制
+        let minLeftMargin = null;
+        jQuery("div.ganttview-block").resizable({
+          handles: "e,w",
+          containment: 'parent',
+          start() {
+            prev = jQuery(this).prev()[0] ? jQuery(jQuery(this).prev()[
+              0]) : null;
+            next = jQuery(this).next()[0] ? jQuery(jQuery(this).next()[
+              0]) : null;
+            self = jQuery(this);
+            if (prev) {
+              let pleft = parseFloat(prev.css("left")) || 0;
+              let pwidth = parseFloat(prev.width()) + borderSize;
+              minLeftMargin = pleft + pwidth
+            } else {
+              minLeftMargin = null;
+            }
+            if (next) {
+              let nleft = parseFloat(next.css("left")) || 0;
+              maxLeftMargin = nleft;
+            } else {
+              maxLeftMargin = null;
+            }
+          },
+          resize(event, ui) {
+            let {
+              left = 0
+            } = ui.position;
+            let {
+              width
+            } = ui.size;
+            let hit = false;
+
+            if (minLeftMargin) {
+              if (left < minLeftMargin) {
+                console.log('left hit');
+                hit = true;
+                hitLeft = true;
+              }
+            }
+            if (maxLeftMargin) { //计算右边是否碰撞
+              if ((left + width + borderSize) > maxLeftMargin) {
+                console.log('right hit');
+                hit = true;
+              }
+            }
+            if (hit) {
+              if (!lock) {
+                if (hitLeft) {
+                  maxWidth = ui.originalPosition.left + ui.originalSize
+                    .width - minLeftMargin;
+                } else {
+                  maxWidth = maxLeftMargin - ui.originalPosition.left -
+                    borderSize
+                }
+                lock = true;
+              }
+              event.preventDefault();
+              //TOFIXED：固定最大宽度，因为event.preventDefault()不起暂停作用
+              self.css("max-width", maxWidth)
+            } else {
+              self.css('max-width', '');
+              maxWidth = null;
+              lock = false;
+            }
+          },
+          stop() {
+            if (maxWidth) {
+              self.width(maxWidth);
+              if (hitLeft) {
+                self.css("left", minLeftMargin)
+              }
+            }
+            //重置
+            self.css('max-width', '');
+            maxWidth = null;
+            lock = false;
+            if (callback) {
+              callback(jQuery(this))
+            }
+          }
+        });
+      }
+
+      bindBlockDrag = (callback) => {
+        let borderSize = 2;
+        let prev; //前一个兄弟节点
+        let next; //后一个兄弟节点
+        let self; //自身
+        let maxLeftMargin = 0; //-1值代表不限制
+        let minLeftMargin = 0;
+        jQuery("div.ganttview-block").draggable({
+          axis: "x",
+          scroll: true,
+          containment: 'parent',
+          start() {
+            prev = jQuery(this).prev()[0] ? jQuery(jQuery(this).prev()[
+              0]) : null;
+            next = jQuery(this).next()[0] ? jQuery(jQuery(this).next()[
+              0]) : null;
+            self = jQuery(this);
+            if (prev) {
+              let pleft = parseFloat(prev.css("left")) || 0;
+              let pwidth = parseFloat(prev.width()) + borderSize;
+              minLeftMargin = pleft + pwidth
+            } else {
+              minLeftMargin = null;
+            }
+            if (next) {
+              let nleft = parseFloat(next.css("left")) || 0;
+              maxLeftMargin = nleft;
+            } else {
+              maxLeftMargin = null;
+            }
+          },
+          drag(event, ui) {
+            let {
+              left = 0
+            } = ui.position;
+            let width = self.width();
+            let hit = false;
+            let hitLeft = false;
+
+            //计算左边是否碰撞
+            if (minLeftMargin) {
+              if (left < minLeftMargin) {
+                console.log('left hit');
+                hit = true;
+                hitLeft = true;
+              }
+            }
+            //计算右边是否碰撞
+            if (maxLeftMargin) {
+              if ((left + width + borderSize) > maxLeftMargin) {
+                console.log('right hit');
+                hit = true;
+              }
+            }
+            if (hit) {
+              event.preventDefault();
+              //因为获取的left不准，需要手动修正
+              let fixLeft;
+              if (hitLeft) {
+                fixLeft = minLeftMargin
+              } else {
+                fixLeft = maxLeftMargin - width - borderSize
+              }
+              self.css("left", fixLeft)
+            }
+          },
+          stop() {
+            if (callback) {
+              callback(jQuery(this))
+            }
+          }
+        });
+      }
+
+      bindBlockClick = (callback) => {
+        jQuery("div.ganttview-block").on("click", function() {
+          if (callback) {
+            callback(jQuery(this))
+          }
+        });
+      }
+
+      bindToolTip =()=> {
+        jQuery("div.ganttview-block").tooltip();
+      }
+
+      test = () =>{
+        this.setState({hitBlock:true})
+      }
+
      
       render(){
-        let {datas} = this.state;
+        let {datas,hitBlock} = this.state;
         let {start}  = this.state.props
         return (
           <div className="ganttview">
@@ -179,8 +414,37 @@
                 }
               </div>
               {/*  <!-- 网格部分 --> */}
+              {/* !-- 可操作的容器块部分 --> */}
+              <div className="ganttview-blocks">
+                {
+                  this.allRow().map((item)=>(
+                    <div className="ganttview-block-container"
+                      style={{position:"relative",width:this.hzheaderTotalWidth()+'px'}}>
+                  <div className="ganttview-block"
+                      style={{position: "absolute",opacity: 0.5,width:this.calBlockWidth(item)+'px','backgroundColor':this.randomColor(),'left':this.calLeft(item)+'px'}}
+                      title="Planned, 16 days">
+                    <div className="ganttview-block-text">15</div>
+                  </div>
+                  {/* <!-- 生成碰撞用的block --> */}
+                  
+                  {
+                    hitBlock?(
+                    <div className="ganttview-block"
+                      style={{position: "absolute",opacity: 0.5,width:this.calBlockWidth(item)+'px','backgroundColor':this.randomColor(),'left':this.calLeftRandom(item)+'px'}}
+                      title="Planned, 16 days">
+                      <div className="ganttview-block-text">16</div>
+                    </div>):""
+                  }
+                  {/* <!-- 生成碰撞用的block --> */}
+                </div>
+                  ))
+                }
+              </div>
+              {/* <!-- 可操作的容器块部分 --> */}
             </div>
+            <button onClick={this.test}>开启碰撞块</button>
           </div>
+          
         )
       }
     }
