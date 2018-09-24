@@ -49,8 +49,8 @@
              :style="{width:(hzheaderTotalWidth)+'px'}">
           <div class="ganttview-hzheader-months">
             <div class="ganttview-hzheader-month"
-                 v-for="i in (dateDiff[1]+1)"
-                 :style="{width: getHzHeaderMonthWith(props.start.clone().add(i-1,'d'))+'px'}">{{props.start.clone().add(i-1,'d').format("MM/DD")}}</div>
+                 v-for="(i,index) in dateDiff"
+                 :style="{width:getHzHeaderMonthWith(props.start.clone().add(index,'d'))+'px'}">{{i}}</div>
           </div>
           <div class="ganttview-hzheader-days">
             <div class="ganttview-hzheader-day"
@@ -63,7 +63,7 @@
         <div class="ganttview-grid"
              :style="{width:(hzheaderTotalWidth)+'px'}">
           <div class="ganttview-grid-row"
-               v-for="item in countRow">
+               v-for="item in allRow.length">
             <div class="ganttview-grid-row-cell"
                  :class="[i==0?'ganttview-weekend':'']"
                  v-for="i in hourList"></div>
@@ -109,7 +109,7 @@
       cellWidth: 21,
       cellHeight: 31,
       start: moment(),
-      end: moment().add(3, 'd').add(10, 'h').add(1, 's'),
+      end: moment().add(3, 'd').add(1, 's'),
     };
     new Vue({
       el: '#ganttChart',
@@ -120,12 +120,18 @@
         eventMessage: "",
       },
       computed: {
-        //天数差,小时差
+        //天列表
         dateDiff() {
-          return [this.props.end.diff(this.props.start,
-            'h'), this.props.end.date() - this.props.start.date()];
+          let temp = [];
+          let start = this.props.start.clone();
+          let end = this.props.end.format("MM/DD")
+          for (; start.format("MM/DD") != end; start.add(1, 'd')) {
+            temp.push(start.format("MM/DD"))
+          }
+          temp.push(start.format("MM/DD"))
+          return temp;
         },
-        //获取小时列表
+        //小时列表
         hourList() {
           let temp = [];
           let start = this.props.start.clone()
@@ -137,17 +143,10 @@
           //temp.push(start.hour());
           return temp;
         },
-        //其中2代表前后各加一个小时
+        //其中1代表后各加一个小时
         hzheaderTotalWidth() {
           return ((this.props.end.diff(this.props.start,
             'h') + 1) * this.props.cellWidth)
-        },
-        countRow() {
-          let count = 0;
-          for (let item of this.datas) {
-            count += item.series.length
-          }
-          return count;
         },
         allRow() {
           let temp = [];

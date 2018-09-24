@@ -37,7 +37,7 @@
       cellWidth: 21,
       cellHeight: 31,
       start: moment(),
-      end: moment().add(3, 'd').add(1, 's'),
+      end: moment().add(3, 'd').add(12,'h').add(1, 's'),
     };
 
     class Gantt extends React.Component{
@@ -60,8 +60,15 @@
      
       //天数差,小时差
       dateDiff = () => {
-        let { start, end} = this.state.props;
-        return [end.diff(start,'h'), end.date() - start.date()];
+        let temp = [];
+        let {start,end} = this.state.props;
+        start = start.clone();
+        end = end.format("MM/DD");
+        for (; start.format("MM/DD")!= end; start.add(1, 'd')) {
+          temp.push(start.format("MM/DD"));
+        }
+        temp.push(start.format("MM/DD"));
+        return temp;
       }
 
        //获取小时列表
@@ -77,14 +84,6 @@
         return temp;
       }
 
-      countRow = () => {
-        let count = 0;
-        for (let item of this.state.datas) {
-          count += item.series.length
-        }
-        return count
-      }
-
       //其中2代表前后各加一个小时
       hzheaderTotalWidth = () => {
         let { start, end, cellWidth }=this.state.props;
@@ -93,16 +92,21 @@
       
       //计算每天的MM/DD的block长度
       getHzHeaderMonthWith = (date) => {
+        console.log(date)
         let width;
         let { start, end, cellWidth }=this.state.props;
         if (date.format("MM/DD") == start.format("MM/DD")) {
+          console.log('%c1:','background-color:#'+(~~(Math.random()*(1<<24))).toString(16)+';color:white;padding:4px');
           width = (24 - (start.hour() - 0)) * cellWidth;
         } else if (date.format("MM/DD") == end.format(
             "MM/DD")) {
+          console.log('%c2:','background-color:#'+(~~(Math.random()*(1<<24))).toString(16)+';color:white;padding:4px');
           width = (end.hour() + 1) * cellWidth
         } else {
+          console.log('%c3:','background-color:#'+(~~(Math.random()*(1<<24))).toString(16)+';color:white;padding:4px');
           width = 24 *cellWidth
         }
+        console.log(width)
         return width - 1
       }
 
@@ -391,9 +395,9 @@
                   style={{width:this.hzheaderTotalWidth()+'px'}}>
                 <div className="ganttview-hzheader-months">
                   {
-                    this.toNumArray(this.dateDiff()[1]+1).map((i)=>(
+                    this.dateDiff().map((i,index)=>(
                       <div className="ganttview-hzheader-month"
-                      style={{width: this.getHzHeaderMonthWith(start.clone().add(i,'d'))+'px'}}>{start.clone().add(i,'d').format("MM/DD")}</div>
+                        style={{width: this.getHzHeaderMonthWith(start.clone().add(index,'d'))+'px'}}>{i}</div>
                      ))
                   }
                 </div>
@@ -412,7 +416,7 @@
               <div className="ganttview-grid"
                   style={{width:this.hzheaderTotalWidth()+'px'}}>
                 {
-                  this.toNumArray(this.countRow()).map(() =>(
+                  this.toNumArray(this.allRow().length).map(() =>(
                     <div className="ganttview-grid-row">
                       {
                         this.hourList().map((i)=>(
