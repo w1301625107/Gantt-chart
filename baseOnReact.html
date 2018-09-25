@@ -10,14 +10,14 @@
   <link rel="stylesheet"
         type="text/css"
         href="./jquery.ganttView.css" />
-  <link href="./lib/jquery-ui.css"
+  <link href="./lib/jquery-ui.min.css"
         rel="stylesheet">
-  <script src="./lib/jquery.js"></script>
-  <script src="./lib/jquery-ui.js"></script>
+  <script src="./lib/jquery.min.js"></script>
+  <script src="./lib/jquery-ui.min.js"></script>
   <script src="./lib/babel.min.js"></script>
   <script src="./lib/react.development.js"></script>
   <script src="./lib/react-dom.development.js"></script>
-  <script src="./lib/moment.js"></script>
+  <script src="./lib/moment.min.js"></script>
   <script type="text/javascript"
           src="data.js"></script>
   <style type="text/css">
@@ -92,21 +92,16 @@
       
       //计算每天的MM/DD的block长度
       getHzHeaderMonthWith = (date) => {
-        console.log(date)
         let width;
         let { start, end, cellWidth }=this.state.props;
         if (date.format("MM/DD") == start.format("MM/DD")) {
-          console.log('%c1:','background-color:#'+(~~(Math.random()*(1<<24))).toString(16)+';color:white;padding:4px');
           width = (24 - (start.hour() - 0)) * cellWidth;
         } else if (date.format("MM/DD") == end.format(
             "MM/DD")) {
-          console.log('%c2:','background-color:#'+(~~(Math.random()*(1<<24))).toString(16)+';color:white;padding:4px');
           width = (end.hour() + 1) * cellWidth
         } else {
-          console.log('%c3:','background-color:#'+(~~(Math.random()*(1<<24))).toString(16)+';color:white;padding:4px');
           width = 24 *cellWidth
         }
-        console.log(width)
         return width - 1
       }
 
